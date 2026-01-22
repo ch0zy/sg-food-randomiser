@@ -145,8 +145,8 @@
             <div class="placeholder">Click the button to discover!</div>
         </div>
 
-        <!-- Randomize button -->
-        <button class="button" id="randomizeBtn">🎲 Randomise!</button>
+        <!-- randomise button -->
+        <button class="button" id="randomiseBtn">🎲 Randomise!</button>
     </div>
 
     <script>
@@ -182,7 +182,7 @@
 
         // Get DOM elements
         const resultContainer = document.getElementById('resultContainer');
-        const randomizeBtn = document.getElementById('randomizeBtn');
+        const randomiseBtn = document.getElementById('randomiseBtn');
 
         // Function to get random food item
         function getRandomFood() {
@@ -199,13 +199,13 @@
         }
 
         // Function to handle randomization with animation
-        function randomizeFood() {
+        function randomiseFood() {
             // Add spinning animation
             resultContainer.classList.add('spinning');
             
             // Change button text
-            randomizeBtn.textContent = '🎲 Deciding...';
-            randomizeBtn.disabled = true;
+            randomiseBtn.textContent = '🎲 Deciding...';
+            randomiseBtn.disabled = true;
 
             // Simulate randomising effect with quick changes
             let counter = 0;
@@ -223,15 +223,15 @@
                         const finalFood = getRandomFood();
                         displayFood(finalFood);
                         resultContainer.classList.remove('spinning');
-                        randomizeBtn.textContent = '🎲 Randomize Again!';
-                        randomizeBtn.disabled = false;
+                        randomiseBtn.textContent = '🎲 randomise Again!';
+                        randomiseBtn.disabled = false;
                     }, 100);
                 }
             }, 100);
         }
 
-        // Event listener for randomize button
-        randomizeBtn.addEventListener('click', randomizeFood);
+        // Event listener for randomise button
+        randomiseBtn.addEventListener('click', randomiseFood);
     </script>
 </body>
 </html>
