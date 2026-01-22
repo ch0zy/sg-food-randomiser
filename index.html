@@ -1,1 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What Should I Eat Today?</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* Calm pastel gradient background - light pink to light blue */
+            background: linear-gradient(135deg, #ffc9e0 0%, #d4c5f9 50%, #c5e3f9 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 30px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(200, 180, 240, 0.2);
+            text-align: center;
+        }
+
+        h1 {
+            color: #d88fb8;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #888;
+            font-size: 0.95rem;
+            margin-bottom: 40px;
+        }
+
+        /* Randomizer display area */
+        .result-container {
+            background: linear-gradient(135deg, #e8d5f2 0%, #dbe9fc 100%);
+            border-radius: 20px;
+            padding: 50px 30px;
+            margin-bottom: 30px;
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        /* Spinning animation when randomizing */
+        .result-container.spinning {
+            animation: pulse 0.5s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .food-emoji {
+            font-size: 4rem;
+            margin-bottom: 15px;
+        }
+
+        .food-name {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2d3436;
+        }
+
+        .placeholder {
+            color: #999;
+            font-size: 1.2rem;
+            font-style: italic;
+        }
+
+        /* Button styling */
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 18px 45px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+            width: 100%;
+            max-width: 300px;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .button:active {
+            transform: translateY(0);
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 600px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 1.6rem;
+            }
+
+            .food-emoji {
+                font-size: 3rem;
+            }
+
+            .food-name {
+                font-size: 1.5rem;
+            }
+
+            .button {
+                padding: 16px 35px;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍴 What Should I Eat Today?</h1>
+        <p class="subtitle">Let fate decide your next meal!</p>
+        
+        <!-- Result display area -->
+        <div class="result-container" id="resultContainer">
+            <div class="placeholder">Click the button to discover!</div>
+        </div>
+
+        <!-- Randomize button -->
+        <button class="button" id="randomizeBtn">🎲 Randomise!</button>
+    </div>
+
+    <script>
+        // Array of Singapore food options with emojis
+        const foodOptions = [
+            { name: "Caifan", emoji: "🍱" },
+            { name: "Yong Tau Foo", emoji: "🍲" },
+            { name: "Chicken Rice", emoji: "🍗" },
+            { name: "Pasta", emoji: "🍝" },
+            { name: "Pizza", emoji: "🍕" },
+            { name: "Burger", emoji: "🍔" },
+            { name: "Chicken Chop", emoji: "🍗" },
+            { name: "Fish & Chips", emoji: "🐟" },
+            { name: "Mala Hotpot", emoji: "🌶️" },
+            { name: "Stir-fry", emoji: "🥘" },
+            { name: "Prata", emoji: "🫓" },
+            { name: "Mee Goreng", emoji: "🍜" },
+            { name: "Nasi Padang", emoji: "🍛" },
+            { name: "Nasi Lemak", emoji: "🍚" },
+            { name: "Mee Rebus", emoji: "🍜" },
+            { name: "Laksa", emoji: "🍜" },
+            { name: "Mee Siam", emoji: "🍜" },
+            { name: "Mee Soto", emoji: "🍲" },
+            { name: "Fishball Noodles", emoji: "🍜" },
+            { name: "Wanton Mee", emoji: "🍜" },
+            { name: "Wrap", emoji: "🌯" },
+            { name: "Salad", emoji: "🥗" },
+            { name: "Sushi", emoji: "🍣" },
+            { name: "Donburi", emoji: "🍱" },
+            { name: "Soba", emoji: "🍜" },
+            { name: "Udon", emoji: "🍜" }
+        ];
+
+        // Get DOM elements
+        const resultContainer = document.getElementById('resultContainer');
+        const randomizeBtn = document.getElementById('randomizeBtn');
+
+        // Function to get random food item
+        function getRandomFood() {
+            const randomIndex = Math.floor(Math.random() * foodOptions.length);
+            return foodOptions[randomIndex];
+        }
+
+        // Function to display the selected food
+        function displayFood(food) {
+            resultContainer.innerHTML = `
+                <div class="food-emoji">${food.emoji}</div>
+                <div class="food-name">${food.name}</div>
+            `;
+        }
+
+        // Function to handle randomization with animation
+        function randomizeFood() {
+            // Add spinning animation
+            resultContainer.classList.add('spinning');
+            
+            // Change button text
+            randomizeBtn.textContent = '🎲 Deciding...';
+            randomizeBtn.disabled = true;
+
+            // Simulate randomizing effect with quick changes
+            let counter = 0;
+            const interval = setInterval(() => {
+                const tempFood = getRandomFood();
+                displayFood(tempFood);
+                counter++;
+                
+                // Stop after 10 quick iterations
+                if (counter >= 10) {
+                    clearInterval(interval);
+                    
+                    // Show final result
+                    setTimeout(() => {
+                        const finalFood = getRandomFood();
+                        displayFood(finalFood);
+                        resultContainer.classList.remove('spinning');
+                        randomizeBtn.textContent = '🎲 Randomize Again!';
+                        randomizeBtn.disabled = false;
+                    }, 100);
+                }
+            }, 100);
+        }
+
+        // Event listener for randomize button
+        randomizeBtn.addEventListener('click', randomizeFood);
+    </script>
+</body>
+</html>
