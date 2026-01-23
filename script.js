@@ -77,7 +77,7 @@ function randomiseFood() {
                 const finalFood = getRandomFood();
                 displayFood(finalFood);
                 resultContainer.classList.remove('spinning');
-                randomiseBtn.textContent = '🎲 Randomise Again!';
+                randomiseBtn.textContent = '🎲 Randomise Again';
                 randomiseBtn.disabled = false;
             }, 100);
         }
