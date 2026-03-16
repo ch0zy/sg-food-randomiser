@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>What to Eat? — SG Food Randomiser</title>
+
+  <!-- Zero Design System: Lexend font from Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;600;700&display=swap" rel="stylesheet" />
+
+  <!-- App styles -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+  <!-- ── Toast — fixed bottom notification for user feedback ── -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <div class="container">
+
+    <!-- ── App Header ── -->
+    <header class="header">
+      <h1>🍽️ What to Eat?</h1>
+      <p>Singapore food randomiser — let fate decide your meal!</p>
+    </header>
+
+    <!-- ── Result Card ── -->
+    <div class="card">
+      <div class="result-card">
+        <!-- Emoji icon updated by JS to match the selected food -->
+        <span class="result-emoji" id="result-emoji" aria-hidden="true">🎲</span>
+        <p class="result-label">Today you should eat</p>
+        <!-- Main food result text — updated by JS -->
+        <p class="result-food" id="result-food">Press Randomise!</p>
+      </div>
+
+      <!-- Action buttons -->
+      <div class="btn-row">
+        <!-- Primary: spin and pick a random food -->
+        <button class="btn-primary" id="btn-randomise" onclick="randomise()">
+          🎰 Randomise
+        </button>
+        <!-- Secondary: pick again (disabled until first spin) -->
+        <button class="btn-secondary" id="btn-reselect" onclick="randomise()" disabled>
+          🔄 Again
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Food Options List & Editor ── -->
+    <div class="card">
+      <div class="section-header">
+        <span class="section-title">Food Options</span>
+        <!-- Count badge — updated live by JS -->
+        <span class="section-count" id="food-count">0 options</span>
+      </div>
+
+      <!-- Add new food input row -->
+      <div class="add-row">
+        <input
+          class="add-input"
+          type="text"
+          id="add-input"
+          placeholder="Add a food option…"
+          maxlength="50"
+          onkeydown="handleInputKey(event)"
+          aria-label="New food option"
+        />
+        <button class="btn-add" onclick="addFood()" title="Add food option" aria-label="Add">+</button>
+      </div>
+
+      <!-- Tag cloud — populated and managed by JS -->
+      <div class="food-list" id="food-list" role="list" aria-label="Food options"></div>
+    </div>
+
+    <p class="footer-note">Tap × on any tag to remove it from the pool</p>
+
+  </div><!-- /.container -->
+
+  <script>
+    // =========================================================================
+    // What to Eat? — SG Food Randomiser
+    // All logic lives here so the page works as a single GitHub Pages deployment
+    // =========================================================================
+
+    // ─── Emoji map ────────────────────────────────────────────────────────────
+    // Maps food names to display emojis. Custom-added foods fall back to 🍴.
+    const EMOJI_MAP = {
+      "Caifan":                "🍱",
+      "Yong Tau Foo":          "🍲",
+      "Chicken Rice":          "🍗",
+      "Pasta":                 "🍝",
+      "Pizza":                 "🍕",
+      "Burger":                "🍔",
+      "Chicken Chop":          "🥩",
+      "Fish & Chips":          "🐟",
+      "Mala Hotpot/Stir-fry":  "🌶️",
+      "Prata":                 "🫓",
+      "Mee Goreng":            "🍜",
+      "Nasi Padang":           "🍛",
+      "Nasi Lemak":            "🥥",
+      "Mee Rebus":             "🍜",
+      "Laksa":                 "🍜",
+      "Mee Siam":              "🍜",
+      "Mee Soto":              "🍲",
+      "Fishball Noodles":      "🐟",
+      "Wanton Mee":            "🥟",
+      "Wrap":                  "🌯",
+      "Salad":                 "🥗",
+      "Sushi":                 "🍣",
+      "Donburi":               "🍚",
+      "Soba":                  "🍜",
+      "Udon":                  "🍜",
+      "Taco":                  "🌮",
+      "Briyani":               "🍛",
+      "Thosai":                "🫓",
+      "Roti John":             "🥖",
+      "Porridge":              "🥣",
+      "Ramen":                 "🍜",
+      "Sandwich":              "🥪",
+      "Soup":                  "🍵",
+    };
+
+    // ─── Default food list ────────────────────────────────────────────────────
+    const DEFAULT_FOODS = [
+      "Caifan", "Yong Tau Foo", "Chicken Rice", "Pasta", "Pizza",
+      "Burger", "Chicken Chop", "Fish & Chips", "Mala Hotpot/Stir-fry",
+      "Prata", "Mee Goreng", "Nasi Padang", "Nasi Lemak", "Mee Rebus",
+      "Laksa", "Mee Siam", "Mee Soto", "Fishball Noodles", "Wanton Mee",
+      "Wrap", "Salad", "Sushi", "Donburi", "Soba", "Udon", "Taco",
+      "Briyani", "Thosai", "Roti John", "Porridge", "Ramen",
+      "Sandwich", "Soup"
+    ];
+
+    // ─── App state ────────────────────────────────────────────────────────────
+    let foods       = loadFoods();   // Array of food name strings
+    let currentFood = null;          // Name of the last picked food (for tag highlight)
+    let isSpinning  = false;         // Prevents double-triggering the spin animation
+
+    // ─── Persistence ──────────────────────────────────────────────────────────
+    // Uses sessionStorage so edits persist within the browser tab session.
+    // On a fresh load (new tab / hard refresh) the default list is restored.
+
+    function loadFoods() {
+      try {
+        const saved = sessionStorage.getItem("sg-food-list");
+        return saved ? JSON.parse(saved) : [...DEFAULT_FOODS];
+      } catch {
+        return [...DEFAULT_FOODS];
+      }
+    }
+
+    function saveFoods() {
+      try {
+        sessionStorage.setItem("sg-food-list", JSON.stringify(foods));
+      } catch { /* Ignore storage quota errors silently */ }
+    }
+
+    // ─── Helpers ──────────────────────────────────────────────────────────────
+
+    /** Returns the emoji for a food name, falling back to 🍴 for unknowns. */
+    function getEmoji(food) {
+      return EMOJI_MAP[food] || "🍴";
+    }
+
+    // ─── Render food tag list ─────────────────────────────────────────────────
+    // Rebuilds the entire tag cloud from the `foods` array.
+    // The active tag (currentFood) gets the teal highlight class.
+
+    function renderList() {
+      const list    = document.getElementById("food-list");
+      const countEl = document.getElementById("food-count");
+
+      // Update the live count badge
+      countEl.textContent = `${foods.length} option${foods.length !== 1 ? "s" : ""}`;
+
+      if (foods.length === 0) {
+        list.innerHTML = `<p class="empty-state">No food options yet — add some above!</p>`;
+        return;
+      }
+
+      // Render one pill tag per food item
+      list.innerHTML = foods.map((food, i) => `
+        <span class="food-tag ${food === currentFood ? "active" : ""}" role="listitem">
+          ${getEmoji(food)} ${food}
+          <button
+            class="tag-remove"
+            onclick="removeFood(${i})"
+            title="Remove ${food}"
+            aria-label="Remove ${food}"
+          >×</button>
+        </span>
+      `).join("");
+    }
+
+    // ─── Randomise (slot-machine spin) ───────────────────────────────────────
+    // 1. Disables buttons and starts a rapid-cycling interval (spinning phase).
+    // 2. After `totalTicks` ticks, picks a final result and plays the pop animation.
+    // 3. Re-enables buttons and highlights the active tag.
+
+    function randomise() {
+      if (isSpinning) return;
+
+      if (foods.length === 0) {
+        showToast("Add some food options first!");
+        return;
+      }
+
+      isSpinning = true;
+
+      const resultEl  = document.getElementById("result-food");
+      const emojiEl   = document.getElementById("result-emoji");
+      const btnRandom = document.getElementById("btn-randomise");
+      const btnAgain  = document.getElementById("btn-reselect");
+
+      // Disable buttons for the duration of the animation
+      btnRandom.disabled = true;
+      btnAgain.disabled  = true;
+
+      // Reset previous animation classes so they can retrigger
+      resultEl.classList.remove("pop", "spinning");
+      emojiEl.style.animation = "none";
+
+      // --- Spin phase: flash random food names rapidly ---
+      let ticks = 0;
+      const totalTicks = 18;  // Number of flashes before settling (~1.26 s at 70 ms each)
+      resultEl.classList.add("spinning");
+
+      const interval = setInterval(() => {
+        const preview = foods[Math.floor(Math.random() * foods.length)];
+        resultEl.textContent = preview;
+        emojiEl.textContent  = getEmoji(preview);
+        ticks++;
+
+        if (ticks >= totalTicks) {
+          clearInterval(interval);
+
+          // --- Settle: choose and display the final result ---
+          currentFood = foods[Math.floor(Math.random() * foods.length)];
+
+          resultEl.classList.remove("spinning");
+          resultEl.textContent = currentFood;
+          emojiEl.textContent  = getEmoji(currentFood);
+
+          // Trigger the pop animation (force reflow to restart it)
+          void resultEl.offsetWidth;
+          resultEl.classList.add("pop");
+
+          // Retrigger the emoji bounce animation
+          emojiEl.style.animation = "";
+          void emojiEl.offsetWidth;
+          emojiEl.style.animation = "bounce-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards";
+
+          // Highlight the matching tag in the list
+          renderList();
+
+          // Re-enable buttons and unlock spin
+          btnRandom.disabled = false;
+          btnAgain.disabled  = false;
+          isSpinning = false;
+        }
+      }, 70); // 70 ms per tick — fast enough to feel energetic, slow enough to read
+    }
+
+    // ─── Add a food option ────────────────────────────────────────────────────
+    // Reads the text input, validates for empty / duplicate, then appends to list.
+
+    function addFood() {
+      const input = document.getElementById("add-input");
+      const name  = input.value.trim();
+
+      if (!name) {
+        input.focus();
+        return;
+      }
+
+      // Case-insensitive duplicate guard
+      const isDuplicate = foods.some(f => f.toLowerCase() === name.toLowerCase());
+      if (isDuplicate) {
+        showToast(`"${name}" is already in the list!`);
+        input.select();
+        return;
+      }
+
+      foods.push(name);
+      saveFoods();
+      renderList();
+
+      input.value = "";
+      input.focus();
+      showToast(`Added "${name}" 🎉`);
+    }
+
+    // ─── Remove a food option ─────────────────────────────────────────────────
+    // Removes the item at `index`. If it was the current result, clears the display.
+
+    function removeFood(index) {
+      const removed = foods[index];
+
+      // Clear result display if we're removing the currently shown food
+      if (removed === currentFood) {
+        currentFood = null;
+        document.getElementById("result-food").textContent  = "Press Randomise!";
+        document.getElementById("result-emoji").textContent = "🎲";
+        document.getElementById("btn-reselect").disabled    = true;
+      }
+
+      foods.splice(index, 1);
+      saveFoods();
+      renderList();
+      showToast(`Removed "${removed}"`);
+    }
+
+    // ─── Enter key shortcut for the add input ────────────────────────────────
+    function handleInputKey(event) {
+      if (event.key === "Enter") addFood();
+    }
+
+    // ─── Toast notification ───────────────────────────────────────────────────
+    // Shows a brief bottom toast. Rapid calls reset the timer (debounced).
+
+    let toastTimer = null;
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { toast.classList.remove("show"); }, 2200);
+    }
+
+    // ─── Init ─────────────────────────────────────────────────────────────────
+    // Render the food list as soon as the page loads.
+    renderList();
+  </script>
+
+</body>
+</html>
